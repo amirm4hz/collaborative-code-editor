@@ -1,28 +1,33 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import socket from '../lib/socket';
+import { useOT } from './useOT';
 
-// Custom hook that manages the entire socket lifecycle for a room
-// Returns everything the room page needs to know about the connection
 export function useSocket({ roomId, userName }) {
   const [isConnected, setIsConnected] = useState(false);
-  const [roomData, setRoomData] = useState(null);   // room info from server
-  const [currentUser, setCurrentUser] = useState(null); // our own user object
-  const [users, setUsers] = useState([]);            // all users in room
-  const [code, setCode] = useState('');              // latest code from server
+  const [roomData, setRoomData] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [code, setCode] = useState('');
   const [language, setLanguage] = useState('javascript');
   const [error, setError] = useState('');
 
+  // Keep a ref to current code so our callbacks always have the latest value
+  // without needing to re-register event listeners
+  const codeRef = useRef('');
+  codeRef.current = code;
+
+  const { submitOperation, receiveOperation, acknowledgeOperation } = useOT({
+    roomId,
+    socket,
+  });
+
   useEffect(() => {
-    // Don't connect until we have both roomId and userName
     if (!roomId || !userName) return;
-    
-    // Connect the socket when this hook mounts
+
     socket.connect();
 
-    // --- Connection events ---
     function onConnect() {
       setIsConnected(true);
-      // Once connected, join the room
       socket.emit('room:join', { roomId, userName });
     }
 
@@ -30,41 +35,35 @@ export function useSocket({ roomId, userName }) {
       setIsConnected(false);
     }
 
-    // --- Room events ---
-
-    // Server sends this only to us when we successfully join
     function onRoomJoined({ room, user }) {
       setRoomData(room);
       setCurrentUser(user);
       setCode(room.code || '');
+      codeRef.current = room.code || '';
       setLanguage(room.language || 'javascript');
     }
 
-    // Server sends this to everyone else when a new user joins
     function onUserJoined(user) {
       setUsers(prev => {
-        // Avoid duplicates
         if (prev.find(u => u.id === user.id)) return prev;
         return [...prev, user];
       });
     }
 
-    // Server sends the full updated user list
     function onRoomUsers(userList) {
       setUsers(userList);
     }
 
-    // Server sends this when someone leaves
     function onUserLeft({ userId }) {
       setUsers(prev => prev.filter(u => u.id !== userId));
     }
 
-    // Server sends this when another user changes the code
+    // Legacy full-code broadcast (used for language changes and initial sync)
     function onCodeUpdate({ code: newCode }) {
       setCode(newCode);
+      codeRef.current = newCode;
     }
 
-    // Server sends this when anyone changes the language
     function onLanguageUpdate({ language: newLang }) {
       setLanguage(newLang);
     }
@@ -73,7 +72,18 @@ export function useSocket({ roomId, userName }) {
       setError(message);
     }
 
-    // Register all event listeners
+    // Receive an OT operation from another user
+    function onOTOperation(op) {
+      const newCode = receiveOperation(op, codeRef.current);
+      setCode(newCode);
+      codeRef.current = newCode;
+    }
+
+    // Server acknowledged our operation
+    function onOTAck() {
+      acknowledgeOperation();
+    }
+
     socket.on('connect', onConnect);
     socket.on('disconnect', onDisconnect);
     socket.on('room:joined', onRoomJoined);
@@ -83,8 +93,9 @@ export function useSocket({ roomId, userName }) {
     socket.on('code:update', onCodeUpdate);
     socket.on('language:update', onLanguageUpdate);
     socket.on('room:error', onRoomError);
+    socket.on('ot:operation', onOTOperation);
+    socket.on('ot:ack', onOTAck);
 
-    // Cleanup: remove listeners and disconnect when component unmounts
     return () => {
       socket.off('connect', onConnect);
       socket.off('disconnect', onDisconnect);
@@ -95,17 +106,20 @@ export function useSocket({ roomId, userName }) {
       socket.off('code:update', onCodeUpdate);
       socket.off('language:update', onLanguageUpdate);
       socket.off('room:error', onRoomError);
+      socket.off('ot:operation', onOTOperation);
+      socket.off('ot:ack', onOTAck);
       socket.disconnect();
     };
   }, [roomId, userName]);
 
-  // Emit code changes to the server
-  // useCallback memoizes this function so it doesn't get recreated on every render
   const emitCodeChange = useCallback((newCode) => {
-    socket.emit('code:change', { roomId, code: newCode });
-  }, [roomId]);
+    // Use OT to submit the operation instead of broadcasting raw code
+    submitOperation(codeRef.current, newCode);
+    // Update local state immediately (optimistic update)
+    setCode(newCode);
+    codeRef.current = newCode;
+  }, [submitOperation]);
 
-  // Emit language changes to the server
   const emitLanguageChange = useCallback((newLanguage) => {
     socket.emit('language:change', { roomId, language: newLanguage });
   }, [roomId]);

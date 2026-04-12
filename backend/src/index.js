@@ -5,24 +5,21 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { generalLimiter } = require('./middleware/rateLimiter');
 const { registerRoomHandlers } = require('./socket/roomHandler');
+const { registerOTHandlers } = require('./socket/otHandler');
 
-// Route imports
 const roomsRouter = require('./routes/rooms');
 
 const app = express();
 const server = http.createServer(app);
 
-// --- Attach Socket.io to the HTTP server ---
 const io = new Server(server, {
   cors: {
     origin: process.env.CLIENT_URL || 'http://localhost:3000',
     methods: ['GET', 'POST'],
   },
-  // How long to wait before giving up on a connection
   pingTimeout: 60000,
 });
 
-// --- Middleware ---
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:3000',
   methods: ['GET', 'POST', 'PATCH', 'DELETE'],
@@ -30,7 +27,6 @@ app.use(cors({
 app.use(express.json());
 app.use(generalLimiter);
 
-// --- REST Routes ---
 app.use('/api/rooms', roomsRouter);
 
 app.get('/health', (req, res) => {
@@ -46,19 +42,22 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Internal server error' });
 });
 
-// --- Socket.io Connection Handler ---
 io.on('connection', (socket) => {
   console.log(`🔌 Socket connected: ${socket.id}`);
 
-  // Register all room-related socket events
+  // Register room handlers (join, leave, cursor, code broadcast)
   registerRoomHandlers(io, socket);
+
+  // Register OT handlers (conflict-free operation transforms)
+  // We pass activeRooms from roomHandler via a shared reference
+  const { activeRooms } = require('./socket/roomHandler');
+  registerOTHandlers(io, socket, activeRooms);
 
   socket.on('disconnect', () => {
     console.log(`🔌 Socket disconnected: ${socket.id}`);
   });
 });
 
-// --- Start Server ---
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);

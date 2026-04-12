@@ -168,4 +168,4 @@ function registerRoomHandlers(io, socket) {
   });
 }
 
-module.exports = { registerRoomHandlers };
+module.exports = { registerRoomHandlers, activeRooms };
