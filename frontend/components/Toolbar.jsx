@@ -1,0 +1,86 @@
+'use client';
+
+const LANGUAGES = [
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'python', label: 'Python' },
+  { value: 'c', label: 'C' },
+];
+
+export default function Toolbar({
+  roomName,
+  language,
+  onLanguageChange,
+  isDark,
+  onThemeToggle,
+  isConnected,
+  onShare,
+}) {
+  return (
+    <header
+      className="flex items-center justify-between px-4 py-2 border-b shrink-0"
+      style={{ borderColor: 'var(--border)', background: 'var(--bg-secondary)' }}
+    >
+      {/* Left side — room name + connection status */}
+      <div className="flex items-center gap-3">
+        <a
+          href="/"
+          className="text-sm transition-colors hover:text-indigo-400"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          ← Home
+        </a>
+        <span style={{ color: 'var(--border)' }}>|</span>
+        <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+          {roomName}
+        </span>
+
+        {/* Live connection indicator dot */}
+        <div className="flex items-center gap-1.5">
+          <div
+            className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}
+            style={{ boxShadow: isConnected ? '0 0 6px #4ade80' : '0 0 6px #f87171' }}
+          />
+          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            {isConnected ? 'Live' : 'Connecting...'}
+          </span>
+        </div>
+      </div>
+
+      {/* Right side — language selector, theme toggle, share */}
+      <div className="flex items-center gap-2">
+        {/* Language selector */}
+        <select
+          value={language}
+          onChange={(e) => onLanguageChange(e.target.value)}
+          className="text-sm px-3 py-1.5 rounded-lg border transition-colors"
+          style={{
+            background: 'var(--bg-surface)',
+            color: 'var(--text-primary)',
+            borderColor: 'var(--border)',
+          }}
+        >
+          {LANGUAGES.map((lang) => (
+            <option key={lang.value} value={lang.value}>
+              {lang.label}
+            </option>
+          ))}
+        </select>
+
+        {/* Theme toggle */}
+        <button
+          onClick={onThemeToggle}
+          className="p-1.5 rounded-lg transition-colors"
+          style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
+          aria-label="Toggle theme"
+        >
+          {isDark ? '☀️' : '🌙'}
+        </button>
+
+        {/* Share button */}
+        <button onClick={onShare} className="btn-secondary text-sm py-1.5 px-3">
+          🔗 Share
+        </button>
+      </div>
+    </header>
+  );
+}
