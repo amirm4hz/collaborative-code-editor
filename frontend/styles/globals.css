@@ -1,0 +1,86 @@
+/* Import JetBrains Mono for code — same font VS Code uses */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+  /* Light mode defaults */
+  :root {
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-surface: #f1f5f9;
+    --text-primary: #0f172a;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+    --accent: #6366f1;
+    --accent-hover: #4f46e5;
+  }
+
+  /* Dark mode overrides */
+  .dark {
+    --bg-primary: #0f0f1a;
+    --bg-secondary: #1a1a2e;
+    --bg-surface: #2a2a3e;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --border: #3a3a5c;
+    --accent: #818cf8;
+    --accent-hover: #6366f1;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Custom scrollbar for dark mode */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200 
+           bg-indigo-500 hover:bg-indigo-600 active:scale-95 
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 rounded-lg font-semibold transition-all duration-200
+           border border-[var(--border)] bg-[var(--bg-surface)]
+           text-[var(--text-primary)] hover:bg-[var(--border)] active:scale-95;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg border border-[var(--border)]
+           bg-[var(--bg-surface)] text-[var(--text-primary)]
+           placeholder-[var(--text-secondary)]
+           focus:outline-none focus:ring-2 focus:ring-indigo-500
+           transition-all duration-200;
+  }
+
+  .card {
+    @apply rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]
+           shadow-lg p-6;
+  }
+}
