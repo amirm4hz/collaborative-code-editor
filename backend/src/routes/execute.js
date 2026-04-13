@@ -53,6 +53,13 @@ router.post('/', executeLimiter, async (req, res) => {
     });
   } catch (err) {
     console.error('Execution error:', err.response?.data || err.message);
+    
+    if (err.response?.status === 429) {
+      return res.status(429).json({ 
+        error: 'Daily execution limit reached. JDoodle free plan allows 200 runs per day. Try again tomorrow.' 
+      });
+    }
+    
     res.status(500).json({ error: err.message || 'Failed to execute code' });
   }
 });
