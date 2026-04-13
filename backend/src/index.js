@@ -8,6 +8,7 @@ const { registerRoomHandlers } = require('./socket/roomHandler');
 const { registerOTHandlers } = require('./socket/otHandler');
 
 const roomsRouter = require('./routes/rooms');
+const executeRouter = require('./routes/execute');
 
 const app = express();
 const server = http.createServer(app);
@@ -28,6 +29,7 @@ app.use(express.json());
 app.use(generalLimiter);
 
 app.use('/api/rooms', roomsRouter);
+app.use('/api/execute', executeRouter);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

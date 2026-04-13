@@ -6,6 +6,7 @@ import { useSocket } from '../../../hooks/useSocket';
 import Editor from '../../../components/Editor';
 import Toolbar from '../../../components/Toolbar';
 import UserList from '../../../components/UserList';
+import OutputPanel from '../../../components/OutputPanel';
 
 export default function RoomPage() {
   const { roomId } = useParams();
@@ -17,6 +18,10 @@ export default function RoomPage() {
   const [userName, setUserName] = useState('');
   const [nameSubmitted, setNameSubmitted] = useState(false);
   const [isDark, setIsDark] = useState(true);
+
+  // Code execution state
+  const [isRunning, setIsRunning] = useState(false);
+  const [output, setOutput] = useState(null);
 
   useEffect(() => {
     async function fetchRoom() {
@@ -72,6 +77,49 @@ export default function RoomPage() {
     e.preventDefault();
     if (!userName.trim()) return;
     setNameSubmitted(true);
+  }
+
+  // Send code to our backend which proxies it to Judge0
+  async function handleRun() {
+    if (isRunning) return;
+    setIsRunning(true);
+    setOutput(null);
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/execute`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, language }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setOutput({
+          success: false,
+          status: 'Error',
+          stderr: data.error || 'Execution failed',
+          stdout: '',
+          compileOutput: '',
+        });
+        return;
+      }
+
+      setOutput(data);
+    } catch (err) {
+      setOutput({
+        success: false,
+        status: 'Error',
+        stderr: 'Could not reach execution service. Check your API key.',
+        stdout: '',
+        compileOutput: '',
+      });
+    } finally {
+      setIsRunning(false);
+    }
   }
 
   if (loading) {
@@ -143,18 +191,27 @@ export default function RoomPage() {
         onThemeToggle={handleThemeToggle}
         isConnected={isConnected}
         onShare={handleShare}
+        onRun={handleRun}
+        isRunning={isRunning}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <Editor
-          code={code}
-          language={language}
-          isDark={isDark}
-          onChange={emitCodeChange}
-          onCursorMove={emitCursorMove}
-          cursors={cursors}
-          currentUserId={currentUser?.id}
-        />
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <Editor
+            code={code}
+            language={language}
+            isDark={isDark}
+            onChange={emitCodeChange}
+            onCursorMove={emitCursorMove}
+            cursors={cursors}
+            currentUserId={currentUser?.id}
+          />
+          <OutputPanel
+            output={output}
+            isRunning={isRunning}
+            onClose={() => setOutput(null)}
+          />
+        </div>
         <UserList
           users={users}
           currentUserId={currentUser?.id}

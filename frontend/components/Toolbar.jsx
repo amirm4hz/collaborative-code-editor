@@ -14,13 +14,15 @@ export default function Toolbar({
   onThemeToggle,
   isConnected,
   onShare,
+  onRun,
+  isRunning,
 }) {
   return (
     <header
       className="flex items-center justify-between px-4 py-2 border-b shrink-0"
       style={{ borderColor: 'var(--border)', background: 'var(--bg-secondary)' }}
     >
-      {/* Left side — room name + connection status */}
+      {/* Left side */}
       <div className="flex items-center gap-3">
         <a
           href="/"
@@ -34,7 +36,6 @@ export default function Toolbar({
           {roomName}
         </span>
 
-        {/* Live connection indicator dot */}
         <div className="flex items-center gap-1.5">
           <div
             className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}
@@ -46,9 +47,8 @@ export default function Toolbar({
         </div>
       </div>
 
-      {/* Right side — language selector, theme toggle, share */}
+      {/* Right side */}
       <div className="flex items-center gap-2">
-        {/* Language selector */}
         <select
           value={language}
           onChange={(e) => onLanguageChange(e.target.value)}
@@ -66,7 +66,6 @@ export default function Toolbar({
           ))}
         </select>
 
-        {/* Theme toggle */}
         <button
           onClick={onThemeToggle}
           className="p-1.5 rounded-lg transition-colors"
@@ -76,9 +75,24 @@ export default function Toolbar({
           {isDark ? '☀️' : '🌙'}
         </button>
 
-        {/* Share button */}
         <button onClick={onShare} className="btn-secondary text-sm py-1.5 px-3">
           🔗 Share
+        </button>
+
+        {/* Run Code button */}
+        <button
+          onClick={onRun}
+          disabled={isRunning}
+          className="btn-primary text-sm py-1.5 px-4 flex items-center gap-2"
+        >
+          {isRunning ? (
+            <>
+              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Running...
+            </>
+          ) : (
+            <>▶ Run</>
+          )}
         </button>
       </div>
     </header>
