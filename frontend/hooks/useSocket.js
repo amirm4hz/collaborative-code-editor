@@ -10,9 +10,10 @@ export function useSocket({ roomId, userName }) {
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('javascript');
   const [error, setError] = useState('');
+  // Stores cursor positions for all remote users
+  // Structure: { userId: { position, color, name } }
+  const [cursors, setCursors] = useState({});
 
-  // Keep a ref to current code so our callbacks always have the latest value
-  // without needing to re-register event listeners
   const codeRef = useRef('');
   codeRef.current = code;
 
@@ -56,9 +57,14 @@ export function useSocket({ roomId, userName }) {
 
     function onUserLeft({ userId }) {
       setUsers(prev => prev.filter(u => u.id !== userId));
+      // Remove their cursor when they leave
+      setCursors(prev => {
+        const next = { ...prev };
+        delete next[userId];
+        return next;
+      });
     }
 
-    // Legacy full-code broadcast (used for language changes and initial sync)
     function onCodeUpdate({ code: newCode }) {
       setCode(newCode);
       codeRef.current = newCode;
@@ -72,16 +78,22 @@ export function useSocket({ roomId, userName }) {
       setError(message);
     }
 
-    // Receive an OT operation from another user
     function onOTOperation(op) {
       const newCode = receiveOperation(op, codeRef.current);
       setCode(newCode);
       codeRef.current = newCode;
     }
 
-    // Server acknowledged our operation
     function onOTAck() {
       acknowledgeOperation();
+    }
+
+    // Receive another user's cursor position
+    function onCursorUpdate({ userId, cursor, color, name }) {
+      setCursors(prev => ({
+        ...prev,
+        [userId]: { position: cursor, color, name },
+      }));
     }
 
     socket.on('connect', onConnect);
@@ -95,6 +107,7 @@ export function useSocket({ roomId, userName }) {
     socket.on('room:error', onRoomError);
     socket.on('ot:operation', onOTOperation);
     socket.on('ot:ack', onOTAck);
+    socket.on('cursor:update', onCursorUpdate);
 
     return () => {
       socket.off('connect', onConnect);
@@ -108,20 +121,24 @@ export function useSocket({ roomId, userName }) {
       socket.off('room:error', onRoomError);
       socket.off('ot:operation', onOTOperation);
       socket.off('ot:ack', onOTAck);
+      socket.off('cursor:update', onCursorUpdate);
       socket.disconnect();
     };
   }, [roomId, userName]);
 
   const emitCodeChange = useCallback((newCode) => {
-    // Use OT to submit the operation instead of broadcasting raw code
     submitOperation(codeRef.current, newCode);
-    // Update local state immediately (optimistic update)
     setCode(newCode);
     codeRef.current = newCode;
   }, [submitOperation]);
 
   const emitLanguageChange = useCallback((newLanguage) => {
     socket.emit('language:change', { roomId, language: newLanguage });
+  }, [roomId]);
+
+  // Emit our cursor position to the server whenever it moves
+  const emitCursorMove = useCallback((cursor) => {
+    socket.emit('cursor:move', { roomId, cursor });
   }, [roomId]);
 
   return {
@@ -132,7 +149,9 @@ export function useSocket({ roomId, userName }) {
     code,
     language,
     error,
+    cursors,
     emitCodeChange,
     emitLanguageChange,
+    emitCursorMove,
   };
 }

@@ -2,6 +2,7 @@
 
 import { useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import UserCursors from './UserCursors';
 
 const MonacoEditor = dynamic(
   () => import('@monaco-editor/react').then((mod) => mod.default),
@@ -19,18 +20,28 @@ export default function Editor({
   language,
   isDark,
   onChange,
+  onCursorMove, // called when our cursor position changes
+  cursors,      // remote users' cursor positions
+  currentUserId,
 }) {
   const editorRef = useRef(null);
-  // Track whether a remote update is being applied
-  // so we don't trigger onChange (which would emit back to server)
   const isRemoteUpdate = useRef(false);
 
   function handleEditorDidMount(editor) {
     editorRef.current = editor;
     editor.focus();
+
+    // Listen for cursor position changes and emit them
+    editor.onDidChangeCursorPosition((e) => {
+      if (onCursorMove) {
+        onCursorMove({
+          lineNumber: e.position.lineNumber,
+          column: e.position.column,
+        });
+      }
+    });
   }
 
-  // Apply remote code changes without triggering onChange
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor) return;
@@ -39,13 +50,11 @@ export default function Editor({
     if (currentValue !== code) {
       isRemoteUpdate.current = true;
 
-      // Save cursor position before updating
       const position = editor.getPosition();
       const selection = editor.getSelection();
 
       editor.setValue(code);
 
-      // Restore cursor position after update
       if (position) editor.setPosition(position);
       if (selection) editor.setSelection(selection);
 
@@ -54,13 +63,12 @@ export default function Editor({
   }, [code]);
 
   function handleChange(value) {
-    // Don't emit if this change came from a remote update
     if (isRemoteUpdate.current) return;
     onChange(value || '');
   }
 
   return (
-    <div className="flex-1 overflow-hidden">
+    <div className="flex-1 overflow-hidden relative">
       <MonacoEditor
         height="100%"
         language={MONACO_LANGUAGE_MAP[language] || 'javascript'}
@@ -83,6 +91,12 @@ export default function Editor({
           smoothScrolling: true,
           padding: { top: 16, bottom: 16 },
         }}
+      />
+      {/* Render remote cursors as Monaco decorations */}
+      <UserCursors
+        editorRef={editorRef}
+        cursors={cursors || {}}
+        currentUserId={currentUserId}
       />
     </div>
   );

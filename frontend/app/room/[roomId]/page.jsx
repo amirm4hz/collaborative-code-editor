@@ -11,19 +11,13 @@ export default function RoomPage() {
   const { roomId } = useParams();
   const router = useRouter();
 
-  // Room loading state
   const [roomMeta, setRoomMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState('');
-
-  // User identity
   const [userName, setUserName] = useState('');
   const [nameSubmitted, setNameSubmitted] = useState(false);
-
-  // Theme
   const [isDark, setIsDark] = useState(true);
 
-  // Fetch room metadata on load
   useEffect(() => {
     async function fetchRoom() {
       try {
@@ -41,12 +35,10 @@ export default function RoomPage() {
     }
     fetchRoom();
 
-    // Read saved theme preference
     const saved = localStorage.getItem('theme') || 'dark';
     setIsDark(saved === 'dark');
   }, [roomId]);
 
-  // Connect to socket only after the user has entered their name
   const {
     isConnected,
     currentUser,
@@ -54,12 +46,14 @@ export default function RoomPage() {
     code,
     language,
     error: socketError,
+    cursors,
     emitCodeChange,
     emitLanguageChange,
+    emitCursorMove,
   } = useSocket(
     nameSubmitted
       ? { roomId, userName }
-      : { roomId: null, userName: null }   // don't connect until name is set
+      : { roomId: null, userName: null }
   );
 
   function handleThemeToggle() {
@@ -74,23 +68,11 @@ export default function RoomPage() {
     alert('Room link copied to clipboard!');
   }
 
-  // When the local user types, emit to server
-  function handleCodeChange(newCode) {
-    emitCodeChange(newCode);
-  }
-
-  // When language changes, emit to server (syncs for all users)
-  function handleLanguageChange(newLanguage) {
-    emitLanguageChange(newLanguage);
-  }
-
   function handleNameSubmit(e) {
     e.preventDefault();
     if (!userName.trim()) return;
     setNameSubmitted(true);
   }
-
-  // --- Render states ---
 
   if (loading) {
     return (
@@ -151,13 +133,12 @@ export default function RoomPage() {
     );
   }
 
-  // --- Main editor view ---
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
       <Toolbar
         roomName={roomMeta?.name}
         language={language}
-        onLanguageChange={handleLanguageChange}
+        onLanguageChange={emitLanguageChange}
         isDark={isDark}
         onThemeToggle={handleThemeToggle}
         isConnected={isConnected}
@@ -169,7 +150,10 @@ export default function RoomPage() {
           code={code}
           language={language}
           isDark={isDark}
-          onChange={handleCodeChange}
+          onChange={emitCodeChange}
+          onCursorMove={emitCursorMove}
+          cursors={cursors}
+          currentUserId={currentUser?.id}
         />
         <UserList
           users={users}
