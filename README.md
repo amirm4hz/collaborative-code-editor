@@ -15,43 +15,14 @@ like Google Docs, but for code.
 - 👥 **Multi-user coloured cursors** — see exactly where teammates are editing
 - ⚡ **Real-time sync** — powered by Operational Transforms (conflict-free)
 - 🌐 **Syntax highlighting** — Python, JavaScript, C
-- ▶️ **Run Code** — execute snippets via Judge0 API, see output instantly
+- ▶️ **Run Code** — execute snippets via JDoodle API, see output instantly
 - 🌙 **Dark / Light mode** — persisted per user
 
 ---
 
 ## 🏗️ Architecture
 
-┌─────────────────────────────────────────────────────────────────┐
-│                          CLIENT (Browser)                        │
-│                                                                  │
-│   ┌──────────────┐    ┌──────────────┐    ┌─────────────────┐   │
-│   │  Next.js UI  │    │ Monaco Editor│    │  Socket.io      │   │
-│   │  (Vercel)    │◄──►│  Component   │◄──►│  Client         │   │
-│   └──────────────┘    └──────────────┘    └────────┬────────┘   │
-└────────────────────────────────────────────────────│────────────┘
-│ WebSocket
-┌─────────▼────────────┐
-│   Node.js + Express   │
-│      (Railway)        │
-│                       │
-│  ┌─────────────────┐  │
-│  │  Socket.io      │  │
-│  │  Server (OT)    │  │
-│  └────────┬────────┘  │
-│           │           │
-│  ┌────────▼────────┐  │
-│  │  REST API       │  │
-│  │  /rooms         │  │
-│  │  /execute       │  │
-│  └────────┬────────┘  │
-└───────────│───────────┘
-┌────────────────────────────┤
-│                            │
-┌──────────▼──────────┐    ┌───────────▼──────────┐
-│    PostgreSQL DB     │    │     Judge0 API        │
-│    (Railway)         │    │   (Code Execution)    │
-└─────────────────────┘    └──────────────────────┘
+The frontend (Next.js on Vercel) connects to the backend (Node.js + Express on Render) via REST API for room management and WebSockets (Socket.io) for real-time collaboration. Code changes are synced using Operational Transforms to resolve concurrent edit conflicts. Room state is persisted in PostgreSQL (Neon). Code execution is proxied through the JDoodle API so credentials never reach the client.
 
 ---
 
@@ -105,10 +76,10 @@ Open [http://localhost:3000](http://localhost:3000)
 | Variable | Description |
 |----------|-------------|
 | `PORT` | Server port (default: 4000) |
-| `DATABASE_URL` | PostgreSQL connection string |
+| `DATABASE_URL` | PostgreSQL connection string (Neon) |
 | `CLIENT_URL` | Frontend URL for CORS |
-| `JUDGE0_API_KEY` | RapidAPI key for code execution |
-| `JUDGE0_API_URL` | Judge0 endpoint |
+| `JDOODLE_CLIENT_ID` | JDoodle API client ID |
+| `JDOODLE_CLIENT_SECRET` | JDoodle API client secret |
 
 ### Frontend (`frontend/.env.local`)
 | Variable | Description |
@@ -121,17 +92,17 @@ Open [http://localhost:3000](http://localhost:3000)
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14, React, Tailwind CSS |
+| Frontend | Next.js, React, Tailwind CSS |
 | Editor | Monaco Editor (same as VS Code) |
 | Real-time | Socket.io (WebSockets) |
 | Conflict resolution | Operational Transforms |
 | Backend | Node.js, Express |
-| Database | PostgreSQL |
-| Code execution | Judge0 API |
-| Deployment | Vercel (frontend), Railway (backend) |
+| Database | PostgreSQL (Neon) |
+| Code execution | JDoodle API |
+| Deployment | Vercel (frontend), Render (backend) |
 
 ---
 
 ## 📄 License
 
-MIT © [Amir Mahdian]
+MIT © Amir Mahdian
