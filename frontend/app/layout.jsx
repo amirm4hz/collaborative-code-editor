@@ -1,4 +1,4 @@
-import '../styles/globals.css' 
+import '../styles/globals.css'
 
 export const metadata = {
   title: 'CollabCode — Real-Time Collaborative Editor',
@@ -7,12 +7,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    // suppressHydrationWarning prevents a React warning caused by
-    // the theme class being added before React hydrates
     <html lang="en" suppressHydrationWarning>
-      <body>
-        {/* Theme initialisation script — runs before React loads
-            so there's no flash of wrong theme on page load */}
+      <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -25,8 +21,8 @@ export default function RootLayout({ children }) {
             `,
           }}
         />
-        {children}
-      </body>
+      </head>
+      <body>{children}</body>
     </html>
   );
 }

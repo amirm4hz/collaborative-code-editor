@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSocket } from '../../../hooks/useSocket';
 import Editor from '../../../components/Editor';
@@ -11,6 +11,7 @@ import OutputPanel from '../../../components/OutputPanel';
 export default function RoomPage() {
   const { roomId } = useParams();
   const router = useRouter();
+  const pyodideRef = useRef(null);
 
   const [roomMeta, setRoomMeta] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,6 +19,8 @@ export default function RoomPage() {
   const [userName, setUserName] = useState('');
   const [nameSubmitted, setNameSubmitted] = useState(false);
   const [isDark, setIsDark] = useState(true);
+  const [pyodideLoading, setPyodideLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   // Code execution state
   const [isRunning, setIsRunning] = useState(false);
@@ -79,46 +82,102 @@ export default function RoomPage() {
     setNameSubmitted(true);
   }
 
-  // Send code to our backend which proxies it to Judge0
   async function handleRun() {
     if (isRunning) return;
     setIsRunning(true);
     setOutput(null);
 
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/execute`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ code, language }),
-        }
-      );
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setOutput({
-          success: false,
-          status: res.status === 429 ? 'Rate Limited' : 'Error',
-          stderr: data.error || 'Execution failed',
-          stdout: '',
-          compileOutput: '',
-        });
-        return;
-      }
-
-      setOutput(data);
-    } catch (err) {
+    // --- C language — not supported in browser ---
+    if (language === 'c') {
       setOutput({
         success: false,
-        status: 'Error',
-        stderr: 'Could not reach execution service.',
-        stdout: '',
-        compileOutput: '',
+        output: 'C compilation requires a local environment.\nPaste your code into https://godbolt.org to run it.',
       });
-    } finally {
       setIsRunning(false);
+      return;
+    }
+
+    // --- JavaScript — run in a sandboxed Web Worker ---
+    if (language === 'javascript') {
+      try {
+        const workerCode = await fetch('/jsWorker.js').then(r => r.text());
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
+
+        worker.onmessage = (e) => {
+          setOutput(e.data);
+          setIsRunning(false);
+          worker.terminate();
+        };
+
+        worker.onerror = (e) => {
+          setOutput({ success: false, output: `Worker error: ${e.message}` });
+          setIsRunning(false);
+          worker.terminate();
+        };
+
+        worker.postMessage({ code });
+      } catch (err) {
+        setOutput({ success: false, output: `Failed to start worker: ${err.message}` });
+        setIsRunning(false);
+      }
+      return;
+    }
+
+    // --- Python — run via Pyodide (WebAssembly) ---
+    if (language === 'python') {
+      try {
+        // Load Pyodide on first use — ~10MB download, cached after that
+        if (!pyodideRef.current) {
+          setPyodideLoading(true);
+          setLoadingMessage('Loading Python runtime (first run only)...');
+
+          // Dynamically load the Pyodide script from CDN
+          await new Promise((resolve, reject) => {
+            if (document.getElementById('pyodide-script')) {
+              resolve();
+              return;
+            }
+            const script = document.createElement('script');
+            script.id = 'pyodide-script';
+            script.src = 'https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+
+          setLoadingMessage('Initialising Python interpreter...');
+          pyodideRef.current = await window.loadPyodide();
+          setPyodideLoading(false);
+        }
+
+        setLoadingMessage('Running...');
+
+        const pyodide = pyodideRef.current;
+
+        // Capture stdout and stderr
+        let stdout = '';
+        let stderr = '';
+
+        pyodide.setStdout({ batched: (text) => { stdout += text + '\n'; } });
+        pyodide.setStderr({ batched: (text) => { stderr += text + '\n'; } });
+
+        await pyodide.runPythonAsync(code);
+
+        setOutput({
+          success: stderr === '',
+          output: (stdout + stderr).trim() || '(no output)',
+        });
+      } catch (err) {
+        setOutput({
+          success: false,
+          output: err.message || 'Python execution failed',
+        });
+      } finally {
+        setIsRunning(false);
+        setLoadingMessage('');
+      }
+      return;
     }
   }
 
@@ -208,7 +267,8 @@ export default function RoomPage() {
           />
           <OutputPanel
             output={output}
-            isRunning={isRunning}
+            isRunning={isRunning || pyodideLoading}
+            loadingMessage={loadingMessage}
             onClose={() => setOutput(null)}
           />
         </div>

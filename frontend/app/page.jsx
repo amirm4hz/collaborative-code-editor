@@ -1,6 +1,6 @@
 'use client'; // This tells Next.js this component runs in the browser, not on the server
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
@@ -18,11 +18,14 @@ export default function HomePage() {
   const [joinError, setJoinError] = useState('');
 
   // Theme state
-  const [isDark, setIsDark] = useState(
-    typeof window !== 'undefined'
-      ? document.documentElement.classList.contains('dark')
-      : true
-  );
+  const [isDark, setIsDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('theme') || 'dark';
+    setIsDark(saved === 'dark');
+    setMounted(true);
+  }, []);
 
   function toggleTheme() {
     const newTheme = isDark ? 'light' : 'dark';
@@ -119,7 +122,7 @@ export default function HomePage() {
           style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
           aria-label="Toggle theme"
         >
-          {isDark ? '☀️' : '🌙'}
+          {mounted ? (isDark ? '☀️' : '🌙') : '☀️'}
         </button>
       </nav>
 
