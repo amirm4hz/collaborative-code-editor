@@ -100,7 +100,7 @@ export default function RoomPage() {
       if (!res.ok) {
         setOutput({
           success: false,
-          status: 'Error',
+          status: res.status === 429 ? 'Rate Limited' : 'Error',
           stderr: data.error || 'Execution failed',
           stdout: '',
           compileOutput: '',
@@ -113,7 +113,7 @@ export default function RoomPage() {
       setOutput({
         success: false,
         status: 'Error',
-        stderr: 'Could not reach execution service. Check your API key.',
+        stderr: 'Could not reach execution service.',
         stdout: '',
         compileOutput: '',
       });

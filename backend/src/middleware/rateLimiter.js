@@ -13,7 +13,7 @@ const generalLimiter = rateLimit({
 // Stricter limit specifically for code execution (Judge0 has API quotas)
 const executeLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 10,
+  max: 30,
   message: { error: 'Execution rate limit reached. Wait a moment and try again.' },
   standardHeaders: true,
   legacyHeaders: false,
