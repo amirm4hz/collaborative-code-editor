@@ -4,7 +4,7 @@ A production-grade, multi-user collaborative code editor built with Next.js,
 Node.js, Socket.io, and Monaco Editor. Write and run code together in real time —
 like Google Docs, but for code.
 
-[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://your-vercel-url.vercel.app)
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://collabcode-delta.vercel.app)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 ---
