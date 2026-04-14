@@ -12,7 +12,7 @@ const MonacoEditor = dynamic(
 const MONACO_LANGUAGE_MAP = {
   javascript: 'javascript',
   python: 'python',
-  c: 'c',
+  typescript: 'typescript',
 };
 
 export default function Editor({

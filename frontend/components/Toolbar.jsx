@@ -3,7 +3,7 @@
 const LANGUAGES = [
   { value: 'javascript', label: 'JavaScript' },
   { value: 'python', label: 'Python' },
-  { value: 'c', label: 'C' },
+  { value: 'typescript', label: 'TypeScript' },
 ];
 
 export default function Toolbar({

@@ -87,13 +87,51 @@ export default function RoomPage() {
     setIsRunning(true);
     setOutput(null);
 
-    // --- C language — not supported in browser ---
-    if (language === 'c') {
-      setOutput({
-        success: false,
-        output: 'C compilation requires a local environment.\nPaste your code into https://godbolt.org to run it.',
-      });
-      setIsRunning(false);
+    if (language === 'typescript') {
+      try {
+        // Load TypeScript compiler from CDN on first use
+        await new Promise((resolve, reject) => {
+          if (window.ts) { resolve(); return; }
+          if (document.getElementById('ts-script')) { resolve(); return; }
+          const script = document.createElement('script');
+          script.id = 'ts-script';
+          script.src = 'https://cdn.jsdelivr.net/npm/typescript@5.3.3/lib/typescript.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.head.appendChild(script);
+        });
+
+        // Transpile TypeScript to JavaScript using the TS compiler
+        const result = window.ts.transpileModule(code, {
+          compilerOptions: {
+            target: window.ts.ScriptTarget.ES2020,
+            module: window.ts.ModuleKind.None,
+            strict: false,
+          },
+        });
+
+        // Run the transpiled JS in our sandboxed Web Worker
+        const workerCode = await fetch('/jsWorker.js').then(r => r.text());
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const worker = new Worker(URL.createObjectURL(blob));
+
+        worker.onmessage = (e) => {
+          setOutput(e.data);
+          setIsRunning(false);
+          worker.terminate();
+        };
+
+        worker.onerror = (e) => {
+          setOutput({ success: false, output: `Worker error: ${e.message}` });
+          setIsRunning(false);
+          worker.terminate();
+        };
+
+        worker.postMessage({ code: result.outputText });
+      } catch (err) {
+        setOutput({ success: false, output: `TypeScript error: ${err.message}` });
+        setIsRunning(false);
+      }
       return;
     }
 
