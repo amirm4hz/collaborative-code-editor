@@ -7,6 +7,8 @@ like Google Docs, but for code.
 [![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://collabcode-delta.vercel.app)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+🔴 **Live Demo:** [https://collabcode-delta.vercel.app](https://collabcode-delta.vercel.app)
+
 ---
 
 ## ✨ Features
@@ -14,15 +16,15 @@ like Google Docs, but for code.
 - 🔗 **Shareable room links** — instant collaboration, no account needed
 - 👥 **Multi-user coloured cursors** — see exactly where teammates are editing
 - ⚡ **Real-time sync** — powered by Operational Transforms (conflict-free)
-- 🌐 **Syntax highlighting** — Python, JavaScript, C
-- ▶️ **Run Code** — execute snippets via JDoodle API, see output instantly
+- 🌐 **Syntax highlighting** — Python, JavaScript, TypeScript
+- ▶️ **Run Code** — execute code directly in the browser, no server needed
 - 🌙 **Dark / Light mode** — persisted per user
 
 ---
 
 ## 🏗️ Architecture
 
-The frontend (Next.js on Vercel) connects to the backend (Node.js + Express on Render) via REST API for room management and WebSockets (Socket.io) for real-time collaboration. Code changes are synced using Operational Transforms to resolve concurrent edit conflicts. Room state is persisted in PostgreSQL (Neon). Code execution is proxied through the JDoodle API so credentials never reach the client.
+The frontend (Next.js on Vercel) connects to the backend (Node.js + Express on Render) via REST API for room management and WebSockets (Socket.io) for real-time collaboration. Code changes are synced using Operational Transforms to resolve concurrent edit conflicts. Room state is persisted in PostgreSQL (Neon). Code execution runs entirely in the browser — Python via Pyodide (WebAssembly), JavaScript and TypeScript via a sandboxed Web Worker — meaning no API keys, no rate limits, and no latency.
 
 ---
 
@@ -78,8 +80,6 @@ Open [http://localhost:3000](http://localhost:3000)
 | `PORT` | Server port (default: 4000) |
 | `DATABASE_URL` | PostgreSQL connection string (Neon) |
 | `CLIENT_URL` | Frontend URL for CORS |
-| `JDOODLE_CLIENT_ID` | JDoodle API client ID |
-| `JDOODLE_CLIENT_SECRET` | JDoodle API client secret |
 
 ### Frontend (`frontend/.env.local`)
 | Variable | Description |
@@ -98,7 +98,7 @@ Open [http://localhost:3000](http://localhost:3000)
 | Conflict resolution | Operational Transforms |
 | Backend | Node.js, Express |
 | Database | PostgreSQL (Neon) |
-| Code execution | JDoodle API |
+| Code execution | Pyodide WebAssembly (Python), Web Worker sandbox (JS/TS) |
 | Deployment | Vercel (frontend), Render (backend) |
 
 ---
