@@ -166,6 +166,29 @@ function registerRoomHandlers(io, socket) {
       break;
     }
   });
+
+  // --- Event: user sends a chat message ---
+  socket.on('chat:message', ({ roomId, text }) => {
+    if (!activeRooms[roomId]) return;
+    if (!text || text.trim().length === 0) return;
+    if (text.trim().length > 500) return; // prevent spam
+
+    const user = activeRooms[roomId].users[socket.id];
+    if (!user) return;
+
+    const message = {
+      id: require('uuid').v4(),
+      userId: socket.id,
+      name: user.name,
+      color: user.color,
+      text: text.trim(),
+      timestamp: new Date().toISOString(),
+    };
+
+    // Broadcast to EVERYONE in the room including the sender
+    // so the sender sees their own message appear in the chat
+    io.to(roomId).emit('chat:receive', message);
+  });
 }
 
 module.exports = { registerRoomHandlers, activeRooms };

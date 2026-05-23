@@ -10,9 +10,8 @@ export function useSocket({ roomId, userName }) {
   const [code, setCode] = useState('');
   const [language, setLanguage] = useState('javascript');
   const [error, setError] = useState('');
-  // Stores cursor positions for all remote users
-  // Structure: { userId: { position, color, name } }
   const [cursors, setCursors] = useState({});
+  const [messages, setMessages] = useState([]); // chat messages
 
   const codeRef = useRef('');
   codeRef.current = code;
@@ -49,6 +48,13 @@ export function useSocket({ roomId, userName }) {
         if (prev.find(u => u.id === user.id)) return prev;
         return [...prev, user];
       });
+      // System message when someone joins
+      setMessages(prev => [...prev, {
+        id: `sys-${Date.now()}`,
+        system: true,
+        text: `${user.name} joined the room`,
+        timestamp: new Date().toISOString(),
+      }]);
     }
 
     function onRoomUsers(userList) {
@@ -56,8 +62,19 @@ export function useSocket({ roomId, userName }) {
     }
 
     function onUserLeft({ userId }) {
-      setUsers(prev => prev.filter(u => u.id !== userId));
-      // Remove their cursor when they leave
+      setUsers(prev => {
+        const user = prev.find(u => u.id === userId);
+        if (user) {
+          // System message when someone leaves
+          setMessages(msgs => [...msgs, {
+            id: `sys-${Date.now()}`,
+            system: true,
+            text: `${user.name} left the room`,
+            timestamp: new Date().toISOString(),
+          }]);
+        }
+        return prev.filter(u => u.id !== userId);
+      });
       setCursors(prev => {
         const next = { ...prev };
         delete next[userId];
@@ -88,12 +105,16 @@ export function useSocket({ roomId, userName }) {
       acknowledgeOperation();
     }
 
-    // Receive another user's cursor position
     function onCursorUpdate({ userId, cursor, color, name }) {
       setCursors(prev => ({
         ...prev,
         [userId]: { position: cursor, color, name },
       }));
+    }
+
+    // Receive a chat message from the server
+    function onChatReceive(message) {
+      setMessages(prev => [...prev, message]);
     }
 
     socket.on('connect', onConnect);
@@ -108,6 +129,7 @@ export function useSocket({ roomId, userName }) {
     socket.on('ot:operation', onOTOperation);
     socket.on('ot:ack', onOTAck);
     socket.on('cursor:update', onCursorUpdate);
+    socket.on('chat:receive', onChatReceive);
 
     return () => {
       socket.off('connect', onConnect);
@@ -122,6 +144,7 @@ export function useSocket({ roomId, userName }) {
       socket.off('ot:operation', onOTOperation);
       socket.off('ot:ack', onOTAck);
       socket.off('cursor:update', onCursorUpdate);
+      socket.off('chat:receive', onChatReceive);
       socket.disconnect();
     };
   }, [roomId, userName]);
@@ -136,9 +159,13 @@ export function useSocket({ roomId, userName }) {
     socket.emit('language:change', { roomId, language: newLanguage });
   }, [roomId]);
 
-  // Emit our cursor position to the server whenever it moves
   const emitCursorMove = useCallback((cursor) => {
     socket.emit('cursor:move', { roomId, cursor });
+  }, [roomId]);
+
+  // Send a chat message
+  const emitChatMessage = useCallback((text) => {
+    socket.emit('chat:message', { roomId, text });
   }, [roomId]);
 
   return {
@@ -150,8 +177,10 @@ export function useSocket({ roomId, userName }) {
     language,
     error,
     cursors,
+    messages,
     emitCodeChange,
     emitLanguageChange,
     emitCursorMove,
+    emitChatMessage,
   };
 }

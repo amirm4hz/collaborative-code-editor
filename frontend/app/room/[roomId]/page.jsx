@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSocket } from '../../../hooks/useSocket';
+import ChatPanel from '../../../components/ChatPanel';
 import Editor from '../../../components/Editor';
 import Toolbar from '../../../components/Toolbar';
-import UserList from '../../../components/UserList';
 import OutputPanel from '../../../components/OutputPanel';
 
 export default function RoomPage() {
@@ -58,6 +58,7 @@ export default function RoomPage() {
     emitCodeChange,
     emitLanguageChange,
     emitCursorMove,
+    emitChatMessage,
   } = useSocket(
     nameSubmitted
       ? { roomId, userName }
@@ -310,9 +311,12 @@ export default function RoomPage() {
             onClose={() => setOutput(null)}
           />
         </div>
-        <UserList
+        <ChatPanel
+          messages={messages}
           users={users}
           currentUserId={currentUser?.id}
+          onSendMessage={emitChatMessage}
+          isConnected={isConnected}
         />
       </div>
     </div>
