@@ -34,9 +34,8 @@ export default function HomePage() {
     setIsDark(!isDark);
   }
 
-  // Creates a new room via our backend API, then redirects to it
   async function handleCreate(e) {
-    e.preventDefault(); // Prevent browser default form submission
+    e.preventDefault();
     if (!roomName.trim()) {
       setCreateError('Please enter a room name');
       return;
@@ -45,27 +44,43 @@ export default function HomePage() {
     setCreating(true);
     setCreateError('');
 
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/rooms`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: roomName.trim(), language }),
+    // Retry up to 3 times with increasing delays
+    // This handles Render's free tier cold start (takes ~30 seconds to wake)
+    const maxRetries = 3;
+    const delays = [0, 8000, 15000];
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          setCreateError(`Server is waking up... retrying (${attempt}/${maxRetries - 1})`);
+          await new Promise(res => setTimeout(res, delays[attempt]));
         }
-      );
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to create room');
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/rooms`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: roomName.trim(), language }),
+          }
+        );
+
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.error || 'Failed to create room');
+        }
+
+        const room = await res.json();
+        router.push(`/room/${room.id}`);
+        return;
+
+      } catch (err) {
+        if (attempt === maxRetries - 1) {
+          setCreateError('Server unavailable. Please try again in a moment.');
+          setCreating(false);
+          return;
+        }
       }
-
-      const room = await res.json();
-      // Redirect to the room page — Next.js handles this client-side
-      router.push(`/room/${room.id}`);
-    } catch (err) {
-      setCreateError(err.message);
-      setCreating(false);
     }
   }
 
@@ -78,25 +93,36 @@ export default function HomePage() {
       return;
     }
 
-    // Extract just the ID if someone pastes a full URL
     const roomId = id.includes('/') ? id.split('/').pop() : id;
-
     setJoining(true);
     setJoinError('');
 
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/rooms/${roomId}`
-      );
+    const maxRetries = 3;
+    const delays = [0, 8000, 15000];
 
-      if (!res.ok) {
-        throw new Error('Room not found. Check the ID and try again.');
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          setJoinError(`Server is waking up... retrying (${attempt}/${maxRetries - 1})`);
+          await new Promise(res => setTimeout(res, delays[attempt]));
+        }
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/rooms/${roomId}`
+        );
+
+        if (!res.ok) throw new Error('Room not found. Check the ID and try again.');
+
+        router.push(`/room/${roomId}`);
+        return;
+
+      } catch (err) {
+        if (attempt === maxRetries - 1) {
+          setJoinError(err.message);
+          setJoining(false);
+          return;
+        }
       }
-
-      router.push(`/room/${roomId}`);
-    } catch (err) {
-      setJoinError(err.message);
-      setJoining(false);
     }
   }
 
