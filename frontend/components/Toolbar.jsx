@@ -22,7 +22,10 @@ export default function Toolbar({
   return (
     <header
       className="flex items-center justify-between px-3 py-2 border-b shrink-0 gap-2"
-      style={{ borderColor: 'var(--border)', background: 'var(--bg-secondary)', paddingTop: 'max(0.5rem, env(safe-area-inset-top))'}}
+      style={{ borderColor: 'var(--border)', background: 'var(--bg-secondary)',  
+  paddingTop: 'max(2rem, env(safe-area-inset-top))',
+  paddingLeft: 'max(0.75rem, env(safe-area-inset-left))',
+  paddingRight: 'max(0.75rem, env(safe-area-inset-right))',}}
     >
       {/* Left side — home + room name + status */}
       <div className="flex items-center gap-2 min-w-0">
