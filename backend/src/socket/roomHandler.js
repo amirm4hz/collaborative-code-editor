@@ -50,6 +50,7 @@ function registerRoomHandlers(io, socket) {
           users: {},
           code: room.code || '',
           language: room.language || 'javascript',
+          activeFileId: null,
         };
       }
 
@@ -70,6 +71,7 @@ function registerRoomHandlers(io, socket) {
           name: room.name,
           language: activeRooms[roomId].language,
           code: activeRooms[roomId].code,
+          activeFileId: activeRooms[roomId].activeFileId,
         },
         user,
       });
@@ -127,6 +129,33 @@ function registerRoomHandlers(io, socket) {
       color: activeRooms[roomId].users[socket.id].color,
       name: activeRooms[roomId].users[socket.id].name,
     });
+  });
+
+  // --- Event: user switches active file ---
+  socket.on('file:switch', ({ roomId, fileId }) => {
+    if (!activeRooms[roomId]) return;
+    activeRooms[roomId].activeFileId = fileId;
+    // Tell everyone else to switch to this file
+    socket.to(roomId).emit('file:switched', { fileId });
+  });
+
+  // --- Event: new file created ---
+  socket.on('file:created', ({ roomId, file }) => {
+    if (!activeRooms[roomId]) return;
+    // Broadcast the new file to everyone else so their tab bar updates
+    socket.to(roomId).emit('file:added', { file });
+  });
+
+  // --- Event: file deleted ---
+  socket.on('file:deleted', ({ roomId, fileId, newActiveFileId }) => {
+    if (!activeRooms[roomId]) return;
+    socket.to(roomId).emit('file:removed', { fileId, newActiveFileId });
+  });
+
+  // --- Event: file renamed ---
+  socket.on('file:renamed', ({ roomId, fileId, name }) => {
+    if (!activeRooms[roomId]) return;
+    socket.to(roomId).emit('file:name_updated', { fileId, name });
   });
 
   // --- Event: user disconnects ---

@@ -11,7 +11,9 @@ export function useSocket({ roomId, userName }) {
   const [language, setLanguage] = useState('javascript');
   const [error, setError] = useState('');
   const [cursors, setCursors] = useState({});
-  const [messages, setMessages] = useState([]); // chat messages
+  const [messages, setMessages] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [activeFileId, setActiveFileId] = useState(null);
 
   const codeRef = useRef('');
   codeRef.current = code;
@@ -48,7 +50,6 @@ export function useSocket({ roomId, userName }) {
         if (prev.find(u => u.id === user.id)) return prev;
         return [...prev, user];
       });
-      // System message when someone joins
       setMessages(prev => [...prev, {
         id: `sys-${Date.now()}`,
         system: true,
@@ -65,7 +66,6 @@ export function useSocket({ roomId, userName }) {
       setUsers(prev => {
         const user = prev.find(u => u.id === userId);
         if (user) {
-          // System message when someone leaves
           setMessages(msgs => [...msgs, {
             id: `sys-${Date.now()}`,
             system: true,
@@ -112,9 +112,26 @@ export function useSocket({ roomId, userName }) {
       }));
     }
 
-    // Receive a chat message from the server
     function onChatReceive(message) {
       setMessages(prev => [...prev, message]);
+    }
+
+    // File sync events
+    function onFileSwitched({ fileId }) {
+      setActiveFileId(fileId);
+    }
+
+    function onFileAdded({ file }) {
+      setFiles(prev => [...prev, file]);
+    }
+
+    function onFileRemoved({ fileId, newActiveFileId }) {
+      setFiles(prev => prev.filter(f => f.id !== fileId));
+      setActiveFileId(newActiveFileId);
+    }
+
+    function onFileNameUpdated({ fileId, name }) {
+      setFiles(prev => prev.map(f => f.id === fileId ? { ...f, name } : f));
     }
 
     socket.on('connect', onConnect);
@@ -130,6 +147,10 @@ export function useSocket({ roomId, userName }) {
     socket.on('ot:ack', onOTAck);
     socket.on('cursor:update', onCursorUpdate);
     socket.on('chat:receive', onChatReceive);
+    socket.on('file:switched', onFileSwitched);
+    socket.on('file:added', onFileAdded);
+    socket.on('file:removed', onFileRemoved);
+    socket.on('file:name_updated', onFileNameUpdated);
 
     return () => {
       socket.off('connect', onConnect);
@@ -145,6 +166,10 @@ export function useSocket({ roomId, userName }) {
       socket.off('ot:ack', onOTAck);
       socket.off('cursor:update', onCursorUpdate);
       socket.off('chat:receive', onChatReceive);
+      socket.off('file:switched', onFileSwitched);
+      socket.off('file:added', onFileAdded);
+      socket.off('file:removed', onFileRemoved);
+      socket.off('file:name_updated', onFileNameUpdated);
       socket.disconnect();
     };
   }, [roomId, userName]);
@@ -163,9 +188,25 @@ export function useSocket({ roomId, userName }) {
     socket.emit('cursor:move', { roomId, cursor });
   }, [roomId]);
 
-  // Send a chat message
   const emitChatMessage = useCallback((text) => {
     socket.emit('chat:message', { roomId, text });
+  }, [roomId]);
+
+  const emitFileSwitch = useCallback((fileId) => {
+    socket.emit('file:switch', { roomId, fileId });
+    setActiveFileId(fileId);
+  }, [roomId]);
+
+  const emitFileCreated = useCallback((file) => {
+    socket.emit('file:created', { roomId, file });
+  }, [roomId]);
+
+  const emitFileDeleted = useCallback((fileId, newActiveFileId) => {
+    socket.emit('file:deleted', { roomId, fileId, newActiveFileId });
+  }, [roomId]);
+
+  const emitFileRenamed = useCallback((fileId, name) => {
+    socket.emit('file:renamed', { roomId, fileId, name });
   }, [roomId]);
 
   return {
@@ -178,9 +219,19 @@ export function useSocket({ roomId, userName }) {
     error,
     cursors,
     messages,
+    files,
+    activeFileId,
     emitCodeChange,
     emitLanguageChange,
     emitCursorMove,
     emitChatMessage,
+    emitFileSwitch,
+    emitFileCreated,
+    emitFileDeleted,
+    emitFileRenamed,
+    setFiles,
+    setActiveFileId,
+    setCode,
+    setLanguage,
   };
 }
