@@ -55,6 +55,7 @@ export default function RoomPage() {
     language,
     error: socketError,
     cursors,
+    messages,
     emitCodeChange,
     emitLanguageChange,
     emitCursorMove,
