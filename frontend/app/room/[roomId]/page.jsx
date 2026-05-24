@@ -280,6 +280,8 @@ export default function RoomPage() {
     );
   }
 
+  const [chatOpen, setChatOpen] = useState(false);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ background: 'var(--bg-primary)' }}>
       <Toolbar
@@ -292,10 +294,13 @@ export default function RoomPage() {
         onShare={handleShare}
         onRun={handleRun}
         isRunning={isRunning}
+        onChatToggle={() => setChatOpen(prev => !prev)}
+        unreadCount={chatOpen ? 0 : messages.length}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Editor — always full width on mobile */}
+        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
           <Editor
             code={code}
             language={language}
@@ -312,13 +317,30 @@ export default function RoomPage() {
             onClose={() => setOutput(null)}
           />
         </div>
-        <ChatPanel
-          messages={messages}
-          users={users}
-          currentUserId={currentUser?.id}
-          onSendMessage={emitChatMessage}
-          isConnected={isConnected}
-        />
+
+        {/* Chat panel — sidebar on desktop, overlay on mobile */}
+        {chatOpen && (
+          <>
+            {/* Mobile backdrop */}
+            <div
+              className="fixed inset-0 bg-black/50 z-10 md:hidden"
+              onClick={() => setChatOpen(false)}
+            />
+            <div className="
+              fixed right-0 top-0 h-full z-20 w-72
+              md:relative md:z-auto md:w-64
+            ">
+              <ChatPanel
+                messages={messages}
+                users={users}
+                currentUserId={currentUser?.id}
+                onSendMessage={emitChatMessage}
+                isConnected={isConnected}
+                onClose={() => setChatOpen(false)}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

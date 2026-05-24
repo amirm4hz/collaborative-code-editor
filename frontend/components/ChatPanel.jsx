@@ -15,13 +15,13 @@ export default function ChatPanel({
   currentUserId,
   onSendMessage,
   isConnected,
+  onClose,
 }) {
   const [input, setInput] = useState('');
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat' or 'users'
+  const [activeTab, setActiveTab] = useState('chat');
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -34,25 +34,22 @@ export default function ChatPanel({
     inputRef.current?.focus();
   }
 
-  // Count unread — for future enhancement
   const onlineCount = users.length;
 
   return (
     <aside
-      className="w-64 shrink-0 border-l flex flex-col"
+      className="w-full h-full border-l flex flex-col"
       style={{ borderColor: 'var(--border)', background: 'var(--bg-secondary)' }}
     >
-      {/* Tab switcher — Chat / Users */}
+      {/* Tab switcher */}
       <div
-        className="flex border-b shrink-0"
+        className="flex border-b shrink-0 items-center"
         style={{ borderColor: 'var(--border)' }}
       >
         <button
           onClick={() => setActiveTab('chat')}
           className={`flex-1 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
-            activeTab === 'chat'
-              ? 'border-b-2 border-indigo-500'
-              : ''
+            activeTab === 'chat' ? 'border-b-2 border-indigo-500' : ''
           }`}
           style={{
             color: activeTab === 'chat' ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -63,9 +60,7 @@ export default function ChatPanel({
         <button
           onClick={() => setActiveTab('users')}
           className={`flex-1 py-2 text-xs font-semibold uppercase tracking-wider transition-colors ${
-            activeTab === 'users'
-              ? 'border-b-2 border-indigo-500'
-              : ''
+            activeTab === 'users' ? 'border-b-2 border-indigo-500' : ''
           }`}
           style={{
             color: activeTab === 'users' ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -73,34 +68,35 @@ export default function ChatPanel({
         >
           👥 {onlineCount} Online
         </button>
+
+        {/* Close button — mobile only */}
+        <button
+          onClick={onClose}
+          className="px-3 py-2 text-sm md:hidden"
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          ✕
+        </button>
       </div>
 
       {/* Chat tab */}
       {activeTab === 'chat' && (
         <>
-          {/* Messages list */}
           <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2">
             {messages.length === 0 && (
-              <p
-                className="text-xs text-center mt-4"
-                style={{ color: 'var(--text-secondary)' }}
-              >
+              <p className="text-xs text-center mt-4" style={{ color: 'var(--text-secondary)' }}>
                 No messages yet.
                 <br />Say hello! 👋
               </p>
             )}
 
             {messages.map((msg) => {
-              // System messages (join/leave notifications)
               if (msg.system) {
                 return (
                   <div key={msg.id} className="flex justify-center">
                     <span
                       className="text-xs px-2 py-0.5 rounded-full"
-                      style={{
-                        background: 'var(--bg-surface)',
-                        color: 'var(--text-secondary)',
-                      }}
+                      style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)' }}
                     >
                       {msg.text}
                     </span>
@@ -115,7 +111,6 @@ export default function ChatPanel({
                   key={msg.id}
                   className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'}`}
                 >
-                  {/* Sender name + time */}
                   <div className="flex items-center gap-1.5 mb-0.5 px-1">
                     {!isOwnMessage && (
                       <div
@@ -129,24 +124,16 @@ export default function ChatPanel({
                     >
                       {isOwnMessage ? 'you' : msg.name}
                     </span>
-                    <span
-                      className="text-xs"
-                      style={{ color: 'var(--text-secondary)' }}
-                    >
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                       {formatTime(msg.timestamp)}
                     </span>
                   </div>
 
-                  {/* Message bubble */}
                   <div
-                    className="max-w-[90%] px-3 py-1.5 rounded-2xl text-sm break-words"
+                    className="max-w-[90%] px-3 py-1.5 text-sm break-words"
                     style={{
-                      background: isOwnMessage
-                        ? '#6366f1'
-                        : 'var(--bg-surface)',
-                      color: isOwnMessage
-                        ? '#ffffff'
-                        : 'var(--text-primary)',
+                      background: isOwnMessage ? '#6366f1' : 'var(--bg-surface)',
+                      color: isOwnMessage ? '#ffffff' : 'var(--text-primary)',
                       borderRadius: isOwnMessage
                         ? '18px 18px 4px 18px'
                         : '18px 18px 18px 4px',
@@ -158,11 +145,9 @@ export default function ChatPanel({
               );
             })}
 
-            {/* Invisible div to scroll to */}
             <div ref={bottomRef} />
           </div>
 
-          {/* Message input */}
           <form
             onSubmit={handleSend}
             className="p-3 border-t shrink-0"
@@ -204,10 +189,7 @@ export default function ChatPanel({
                 className="w-2.5 h-2.5 rounded-full shrink-0"
                 style={{ backgroundColor: user.color }}
               />
-              <span
-                className="truncate"
-                style={{ color: 'var(--text-primary)' }}
-              >
+              <span className="truncate" style={{ color: 'var(--text-primary)' }}>
                 {user.name}
                 {user.id === currentUserId && (
                   <span style={{ color: 'var(--text-secondary)' }}> (you)</span>

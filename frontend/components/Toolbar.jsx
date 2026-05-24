@@ -16,6 +16,8 @@ export default function Toolbar({
   onShare,
   onRun,
   isRunning,
+  onChatToggle,
+  unreadCount,   
 }) {
   return (
     <header
@@ -77,6 +79,19 @@ export default function Toolbar({
 
         <button onClick={onShare} className="btn-secondary text-sm py-1.5 px-3">
           🔗 Share
+        </button>
+
+        {/* Chat toggle */}
+        <button
+          onClick={onChatToggle}
+          className="btn-secondary text-sm py-1.5 px-3 relative"
+        >
+          💬
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full text-white text-xs flex items-center justify-center">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </button>
 
         {/* Run Code button */}
