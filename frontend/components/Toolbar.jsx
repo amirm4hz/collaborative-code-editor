@@ -17,48 +17,51 @@ export default function Toolbar({
   onRun,
   isRunning,
   onChatToggle,
-  unreadCount,   
+  unreadCount,
 }) {
   return (
     <header
-      className="flex items-center justify-between px-4 py-2 border-b shrink-0"
+      className="flex items-center justify-between px-3 py-2 border-b shrink-0 gap-2"
       style={{ borderColor: 'var(--border)', background: 'var(--bg-secondary)' }}
     >
-      {/* Left side */}
-      <div className="flex items-center gap-3">
+      {/* Left side — home + room name + status */}
+      <div className="flex items-center gap-2 min-w-0">
         <a
           href="/"
-          className="text-sm transition-colors hover:text-indigo-400"
+          className="text-sm shrink-0 transition-colors hover:text-indigo-400"
           style={{ color: 'var(--text-secondary)' }}
         >
-          ← Home
+          ←
         </a>
-        <span style={{ color: 'var(--border)' }}>|</span>
-        <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+        <span
+          className="font-semibold text-sm truncate max-w-[80px] md:max-w-[160px]"
+          style={{ color: 'var(--text-primary)' }}
+        >
           {roomName}
         </span>
-
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 shrink-0">
           <div
             className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400' : 'bg-red-400'}`}
             style={{ boxShadow: isConnected ? '0 0 6px #4ade80' : '0 0 6px #f87171' }}
           />
-          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+          <span className="text-xs hidden md:inline" style={{ color: 'var(--text-secondary)' }}>
             {isConnected ? 'Live' : 'Connecting...'}
           </span>
         </div>
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center gap-2">
+      {/* Right side — controls */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {/* Language selector */}
         <select
           value={language}
           onChange={(e) => onLanguageChange(e.target.value)}
-          className="text-sm px-3 py-1.5 rounded-lg border transition-colors"
+          className="text-xs px-2 py-1.5 rounded-lg border transition-colors"
           style={{
             background: 'var(--bg-surface)',
             color: 'var(--text-primary)',
             borderColor: 'var(--border)',
+            maxWidth: '110px',
           }}
         >
           {LANGUAGES.map((lang) => (
@@ -68,23 +71,41 @@ export default function Toolbar({
           ))}
         </select>
 
+        {/* Theme toggle */}
         <button
           onClick={onThemeToggle}
-          className="p-1.5 rounded-lg transition-colors"
+          className="p-1.5 rounded-lg transition-colors shrink-0"
           style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}
           aria-label="Toggle theme"
         >
           {isDark ? '☀️' : '🌙'}
         </button>
 
-        <button onClick={onShare} className="btn-secondary text-sm py-1.5 px-3">
-          🔗 Share
+        {/* Share — icon only on mobile */}
+        <button
+          onClick={onShare}
+          className="p-1.5 rounded-lg border transition-colors shrink-0"
+          style={{
+            background: 'var(--bg-surface)',
+            borderColor: 'var(--border)',
+            color: 'var(--text-primary)',
+          }}
+          aria-label="Share"
+        >
+          <span className="hidden md:inline text-sm">🔗 Share</span>
+          <span className="md:hidden text-sm">🔗</span>
         </button>
 
         {/* Chat toggle */}
         <button
           onClick={onChatToggle}
-          className="btn-secondary text-sm py-1.5 px-3 relative"
+          className="p-1.5 rounded-lg border transition-colors shrink-0 relative"
+          style={{
+            background: 'var(--bg-surface)',
+            borderColor: 'var(--border)',
+            color: 'var(--text-primary)',
+          }}
+          aria-label="Chat"
         >
           💬
           {unreadCount > 0 && (
@@ -94,19 +115,16 @@ export default function Toolbar({
           )}
         </button>
 
-        {/* Run Code button */}
+        {/* Run button */}
         <button
           onClick={onRun}
           disabled={isRunning}
-          className="btn-primary text-sm py-1.5 px-4 flex items-center gap-2"
+          className="btn-primary text-xs py-1.5 px-3 flex items-center gap-1 shrink-0"
         >
           {isRunning ? (
-            <>
-              <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Running...
-            </>
+            <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
-            <>▶ Run</>
+            '▶ Run'
           )}
         </button>
       </div>
