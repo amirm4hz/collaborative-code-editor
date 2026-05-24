@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSocket } from '../../../hooks/useSocket';
+import { useProfile } from '../../../hooks/useProfile';
 import Editor from '../../../components/Editor';
 import Toolbar from '../../../components/Toolbar';
 import ChatPanel from '../../../components/ChatPanel';
@@ -24,8 +25,15 @@ export default function RoomPage() {
   const [pyodideLoading, setPyodideLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
+  const { profile, addRecentRoom } = useProfile();
 
   const pyodideRef = useRef(null);
+
+  useEffect(() => {
+    if (profile?.name && !userName) {
+      setUserName(profile.name);
+    }
+  }, [profile]);
 
   useEffect(() => {
     async function fetchRoom() {
@@ -107,6 +115,14 @@ export default function RoomPage() {
   function handleNameSubmit(e) {
     e.preventDefault();
     if (!userName.trim()) return;
+    // Save this room to recent history
+    if (roomMeta) {
+      addRecentRoom({
+        id: roomMeta.id,
+        name: roomMeta.name,
+        language: roomMeta.language,
+      });
+    }
     setNameSubmitted(true);
   }
 
